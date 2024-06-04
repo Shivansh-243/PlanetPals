@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
@@ -9,7 +9,7 @@ function Signup() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const navigate = useNavigate();
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (password !== confirmPassword) {
       console.log("Passwords don't match");
@@ -28,7 +28,7 @@ function Signup() {
         data
       );
       console.log("user", user);
-      // navigate("/login");
+      navigate("/login");
     } catch (error) {
       console.error(error);
     }

@@ -1,13 +1,15 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import { UserAndSocketContext } from "../context/UserAndsocketContext";
 
 function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
+  const userContext = React.useContext(UserAndSocketContext);
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     // Handle login logic here (e.g., call an API)
     const data = {
@@ -20,7 +22,10 @@ function Login() {
         data
       );
       console.log("user", user);
-      // navigate("/login");
+      if (user) {
+        userContext?.setUser(user.data.user);
+        navigate("/globe");
+      }
     } catch (error) {
       console.error(error);
     }
@@ -29,8 +34,8 @@ function Login() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100">
-      <div className="w-full max-w-md p-8 space-y-8 bg-white rounded-lg shadow">
+    <div className="flex items-center justify-center min-h-screen bg-gray-800">
+      <div className="w-full max-w-md p-8 space-y-8 bg-gray-700 rounded-lg shadow">
         <h2 className="text-2xl font-bold text-center">Login</h2>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="rounded-md shadow-sm -space-y-px">
@@ -43,7 +48,7 @@ function Login() {
                 name="email"
                 type="email"
                 required
-                className="relative block w-full px-3 py-2 border border-gray-300 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                className="relative block w-full text-white px-3 py-2 border border-gray-700 bg-gray-500 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                 placeholder="Email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -58,7 +63,7 @@ function Login() {
                 name="password"
                 type="password"
                 required
-                className="relative block w-full px-3 py-2 border border-gray-300 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                className="relative block w-full px-3 py-2 border text-white border-gray-700 bg-gray-500 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                 placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}

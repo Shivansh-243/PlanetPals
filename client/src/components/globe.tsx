@@ -1,6 +1,6 @@
 // src/app/components/Globe.tsx
 "use client";
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import * as THREE from "three";
 import vertexShader from "../shaders/vertex.glsl";
 import fragmentShader from "../shaders/fragment.glsl";
@@ -8,9 +8,11 @@ import atmosphereVertexShader from "../shaders/atmosphereVertex.glsl";
 import atmosphereFragmentShader from "../shaders/atmosphereFragment.glsl";
 import gsap from "gsap";
 import ChatBox from "./ChatBox";
-import getLocation from "./getCurrentLocation";
 import locationSVG from "../assets/img/location.svg";
 import earthMap from "../assets/img/a.jpg";
+import { Socket } from "socket.io-client";
+import { UserAndSocketContext } from "../context/UserAndsocketContext";
+import AcceptDeclineBox from "./acceptDeclineBox";
 
 const Globe = () => {
   const mountRef = useRef<HTMLDivElement>(null);
@@ -19,9 +21,17 @@ const Globe = () => {
     position: { x: number; y: number };
     message: string;
   } | null>(null);
+  const [acceptDeclineChatBox, setAcceptDeclineChatBox] = useState<{
+    position: { x: number; y: number };
+    username: string;
+    senderId: number;
+  } | null>(null);
   const moveGlobe = useRef(false);
   const isChatBoxOpen = useRef(false);
-
+  const userContext = React.useContext(UserAndSocketContext);
+  const socket: Socket | null = userContext ? userContext.socket : null;
+  const user = userContext ? userContext.user : null;
+  const setRoom = userContext ? userContext.setRoom : null;
   useEffect(() => {
     // Create the scene
     const scene = new THREE.Scene();
@@ -160,7 +170,7 @@ const Globe = () => {
     // const markerMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
 
     // Add marker to the globe
-    function addMarker(lat: number, lon: number, id: string) {
+    function addMarker(lat: number, lon: number, username: string, id: number) {
       // Load the SVG texture
       const loader = new THREE.TextureLoader();
       loader.load(locationSVG, (texture: THREE.Texture) => {
@@ -173,31 +183,24 @@ const Globe = () => {
 
         const position = latLongToVector3(lat, lon, 5); // Use the same radius as the globe
         marker.position.copy(position);
-        marker.name = id; // Assign a unique name to each marker
-
+        marker.name = username; // Assign a unique name to each marker
         marker.rotation.x = Math.PI / 2;
         sphere.add(marker);
-        markersRef.current[id] = marker; // Store marker by id
+        console.log("recievers id ", id);
+        markersRef.current[id.toString()] = marker; // Store marker by id
       });
     }
     // Remove marker from the globe
-    function removeMarker(id: string) {
+    function removeMarker(id: number) {
       const marker = markersRef.current[id];
       if (marker) {
-        sphere.remove(markersRef.current["tokyo"]);
+        // sphere.remove(markersRef.current["tokyo"]);
         delete markersRef.current[id];
       }
     }
 
     // Example of adding and removing markers
     // addMarker(40.7128, -74.006, "nyc"); // New York City
-
-    const fetchLocation = async () => {
-      const t = await getLocation();
-      console.log(t);
-      addMarker(t[0], t[1], "shivansh");
-    };
-    fetchLocation();
 
     function get2DPositionFrom3D(object: THREE.Object3D, camera: THREE.Camera) {
       const vector = new THREE.Vector3();
@@ -224,16 +227,69 @@ const Globe = () => {
       );
       if (intersects.length > 0) {
         const clickedMarker = intersects[0].object as THREE.Mesh;
-        openChatBox(clickedMarker);
+
+        let intersectionId: string = "-1";
+        // Iterate over the intersections
+        intersects.forEach((intersection) => {
+          // Find the key (ID) of the mesh in markersRef
+          const id = Object.keys(markersRef.current).find(
+            (key) => markersRef.current[key] === intersection.object
+          );
+
+          // If the ID is found, add it to the intersectionsWithIDs array
+          if (id) {
+            intersectionId = id;
+          }
+        });
+        openChatBox(clickedMarker, intersectionId);
       }
     };
 
     window.addEventListener("click", onMouseClick);
 
-    function openChatBox(marker: THREE.Mesh) {
-      const position = get2DPositionFrom3D(marker, camera);
-      setChatBox({ position, message: `Chat with ${marker.name}` });
-      isChatBoxOpen.current = true;
+    function openChatBox(marker: THREE.Mesh, id: string) {
+      console.log("clicked on ", marker);
+      const pos = get2DPositionFrom3D(marker, camera);
+
+      socket?.emit("let's chat", {
+        username: marker.name,
+        senderId: (user as { id: number }).id,
+        receiverId: parseInt(id),
+        position: { x: pos.x, y: pos.y },
+      });
+      socket?.on("chat request", (data) => {
+        console.log("ch ", data, user);
+        if (data.receiverId === (user as { id: number }).id) {
+          console.log("chat request from ", data.senderId);
+          setAcceptDeclineChatBox({
+            position: data.position,
+            username: data.username,
+            senderId: data.senderId,
+          });
+        }
+      });
+      socket?.on("roomJoin", (data) => {
+        console.log("room joined ", data);
+        socket?.emit("joinRoom", data);
+        // Initialize chat UI for the room
+      });
+      socket?.on("openChat", (data) => {
+        console.log("open chat ", data);
+        if (setRoom) setRoom(data.room);
+        setChatBox({ position: data.position, message: marker.name });
+        isChatBoxOpen.current = true;
+        setAcceptDeclineChatBox(null);
+      });
+      socket?.on("exitChat", () => {
+        setChatBox(null);
+        isChatBoxOpen.current = false;
+      });
+      return () => {
+        socket?.off("chat request");
+        socket?.off("roomJoin");
+        socket?.off("openChat");
+        socket?.off("exitChat");
+      };
     }
 
     // Handle window resize
@@ -244,20 +300,39 @@ const Globe = () => {
     };
     window.addEventListener("resize", handleResize);
 
+    // Handle socket events
+
+    socket?.on("online", (data) => {
+      console.log("online ", data);
+      addMarker(data.lat, data.long, data.user.username, data.user.id);
+    });
+    socket?.on("previousUsers", (data) => {
+      console.log("previous users ", data);
+      data.forEach((user) => {
+        addMarker(user.lat, user.long, user.username, user.id);
+      });
+    });
     // Cleanup on unmount
     return () => {
       window.removeEventListener("resize", handleResize);
       window.removeEventListener("click", onMouseClick);
+      socket?.off("online");
       if (mountRef.current) {
         mountRef.current.removeChild(renderer.domElement);
       }
     };
-  }, []);
+  }, [socket]);
 
   return (
     <>
       <div ref={mountRef} className=" h-screen xl:w-1/2" id="canvasContainer" />
-
+      {acceptDeclineChatBox && (
+        <AcceptDeclineBox
+          position={acceptDeclineChatBox.position}
+          username={acceptDeclineChatBox.username}
+          senderId={acceptDeclineChatBox.senderId}
+        />
+      )}
       {chatBox && (
         <ChatBox
           position={chatBox.position}
