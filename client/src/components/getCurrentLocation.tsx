@@ -2,7 +2,10 @@ const getLocation = (): Promise<[number, number]> => {
   return new Promise((resolve, reject) => {
     const successCallback = (position: GeolocationPosition) => {
       console.log(position);
-      resolve([position.coords.latitude, position.coords.longitude]);
+      resolve([
+        position.coords.latitude + Math.random() * 10,
+        position.coords.longitude + Math.random() * 10,
+      ]);
     };
 
     const errorCallback = (error: GeolocationPositionError) => {

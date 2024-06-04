@@ -32,46 +32,55 @@ io.on("connection", (socket) => {
 
   socket.on("let's chat", (data) => {
     console.log("lets chat ", data);
-    socket.emit("chat request", data);
+    socket.broadcast.emit("chatRequest", data);
   });
   socket.on("sendMessage", (data) => {
     console.log("sendmsg ", data);
-    socket.emit("message", data);
+    socket.to(data.room).emit("message", data);
   });
   socket.on("online", (data) => {
     console.log("online ", data);
+    socket.broadcast.emit("online", data);
+    socket.emit("previousUsers", Array.from(users.values()));
     users.set(data.user.id, {
       lat: data.lat,
       long: data.long,
       username: data.user.username,
       id: data.user.id,
     });
-    socket.broadcast.emit("online", data);
-    socket.emit("previousUsers", Array.from(users.values()));
   });
   socket.on("acceptRequest", (data) => {
     console.log("acceptRequest ", data);
     // return;
     const roomName = data.senderId.toString() + data.receiverId.toString();
     socket.join(roomName);
-    socket.emit("roomJoin", {
+    socket.broadcast.emit("roomJoin", {
       position: data.position,
       room: roomName,
       senderId: data.senderId,
       receiverId: data.receiverId,
     });
   });
-  socket.on("joinRoom", (data) => {
+  socket.on("joinRoom", async (data) => {
     console.log("room join", data);
     socket.join(data.room);
-    socket.emit("openChat", data);
+    const sockets = await io.in(data.room).fetchSockets();
+    console.log("sockets");
+    for (const _socket of sockets) {
+      console.log(_socket.id);
+      // console.log(socket.handshake);
+      // console.log(socket.rooms);
+      // console.log(socket.data);
+    }
+
+    io.to(data.room).emit("openChat", data);
   });
   socket.on("cancelChat", (data) => {
     socket.to(data.room).emit("exitChat");
   });
   socket.on("cancelRequest", (data) => {
     console.log("reject Request ", data);
-    socket.emit("requestRejected", data);
+    io.emit("requestRejected", data);
   });
 });
 

@@ -28,6 +28,7 @@ const Globe = () => {
   } | null>(null);
   const moveGlobe = useRef(false);
   const isChatBoxOpen = useRef(false);
+  const isAcceptDeclineBoxOpen = useRef(false);
   const userContext = React.useContext(UserAndSocketContext);
   const socket: Socket | null = userContext ? userContext.socket : null;
   const user = userContext ? userContext.user : null;
@@ -93,7 +94,7 @@ const Globe = () => {
     };
 
     window.addEventListener("mousedown", () => {
-      if (isChatBoxOpen.current) return;
+      if (isChatBoxOpen.current || isAcceptDeclineBoxOpen.current) return;
       moveGlobe.current = true;
     });
     window.addEventListener("mousemove", (event) => {
@@ -205,7 +206,7 @@ const Globe = () => {
     function get2DPositionFrom3D(object: THREE.Object3D, camera: THREE.Camera) {
       const vector = new THREE.Vector3();
       const canvas = renderer.domElement;
-
+      console.log("object ", object);
       object.updateMatrixWorld();
       vector.setFromMatrixPosition(object.matrixWorld);
       vector.project(camera);
@@ -257,40 +258,20 @@ const Globe = () => {
         receiverId: parseInt(id),
         position: { x: pos.x, y: pos.y },
       });
-      socket?.on("chat request", (data) => {
-        console.log("ch ", data, user);
-        if (data.receiverId === (user as { id: number }).id) {
-          console.log("chat request from ", data.senderId);
-          setAcceptDeclineChatBox({
-            position: data.position,
-            username: data.username,
-            senderId: data.senderId,
-          });
-        }
-      });
-      socket?.on("roomJoin", (data) => {
-        console.log("room joined ", data);
-        socket?.emit("joinRoom", data);
-        // Initialize chat UI for the room
-      });
-      socket?.on("openChat", (data) => {
-        console.log("open chat ", data);
-        if (setRoom) setRoom(data.room);
-        setChatBox({ position: data.position, message: marker.name });
-        isChatBoxOpen.current = true;
-        setAcceptDeclineChatBox(null);
-      });
-      socket?.on("exitChat", () => {
-        setChatBox(null);
-        isChatBoxOpen.current = false;
-      });
+
       return () => {
-        socket?.off("chat request");
-        socket?.off("roomJoin");
-        socket?.off("openChat");
-        socket?.off("exitChat");
+        // socket?.off("chat request");
+        // socket?.off("roomJoin");
+        // socket?.off("openChat");
+        // socket?.off("exitChat");
       };
     }
+
+    const getUserById = (id: number) => {
+      // Assuming markersRef.current is an array of users
+      const user = markersRef.current[id.toString()];
+      return user;
+    };
 
     // Handle window resize
     const handleResize = () => {
@@ -306,17 +287,82 @@ const Globe = () => {
       console.log("online ", data);
       addMarker(data.lat, data.long, data.user.username, data.user.id);
     });
+
+    socket?.on("chatRequest", (data) => {
+      console.log("ch ", data, user);
+      if (data.receiverId === (user as { id: number }).id) {
+        const t = getUserById(data.senderId);
+        console.log("chat request from ", data.senderId);
+
+        // rotating the globe to the user
+        // const requestVector = t.position;
+        // const upVector = new THREE.Vector3(11, -11, 11);
+
+        // console.log("upVector ", upVector);
+        // const axis = new THREE.Vector3()
+        //   .crossVectors(upVector, requestVector)
+        //   .normalize();
+        // const angle = upVector.angleTo(requestVector);
+        // sphere.rotateOnAxis(axis, angle);
+
+        setAcceptDeclineChatBox({
+          position: get2DPositionFrom3D(t, camera),
+          username: data.username,
+          senderId: data.senderId,
+        });
+        isAcceptDeclineBoxOpen.current = true;
+      }
+    });
+
+    socket?.on("roomJoin", (data) => {
+      console.log("room joined ", data);
+      if (data.senderId !== (user as { id: number }).id) return;
+      socket?.emit("joinRoom", data);
+      // Initialize chat UI for the room
+    });
+    socket?.on("openChat", (data) => {
+      console.log("open chat ", data);
+      if (setRoom) setRoom(data.room);
+      let t;
+      if (data.senderId === (user as { id: number }).id)
+        t = getUserById(data.receiverId);
+      else t = getUserById(data.senderId);
+      console.log("t ", t);
+      setChatBox({
+        position: get2DPositionFrom3D(t, camera),
+        message: t.name,
+      });
+      isChatBoxOpen.current = true;
+      setAcceptDeclineChatBox(null);
+      isAcceptDeclineBoxOpen.current = false;
+    });
+    socket?.on("exitChat", () => {
+      setChatBox(null);
+      isChatBoxOpen.current = false;
+    });
+
     socket?.on("previousUsers", (data) => {
       console.log("previous users ", data);
       data.forEach((user) => {
         addMarker(user.lat, user.long, user.username, user.id);
       });
     });
+
+    socket?.on("requestRejected", (data) => {
+      if (data.senderId === (user as { id: number }).id) {
+        alert("Request Rejected");
+      }
+      if (data.receiverId === (user as { id: number }).id) {
+        setAcceptDeclineChatBox(null);
+      }
+    });
     // Cleanup on unmount
     return () => {
       window.removeEventListener("resize", handleResize);
       window.removeEventListener("click", onMouseClick);
       socket?.off("online");
+      socket?.off("chatRequest");
+      socket?.off("previousUsers");
       if (mountRef.current) {
         mountRef.current.removeChild(renderer.domElement);
       }
@@ -331,6 +377,7 @@ const Globe = () => {
           position={acceptDeclineChatBox.position}
           username={acceptDeclineChatBox.username}
           senderId={acceptDeclineChatBox.senderId}
+          isAcceptDeclineBoxOpen={isAcceptDeclineBoxOpen}
         />
       )}
       {chatBox && (

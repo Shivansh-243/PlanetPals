@@ -35,18 +35,11 @@ const ChatBox: React.FC<ChatBoxProps> = ({
 
   useEffect(() => {
     socket?.on("message", (data) => {
-      if (data.id === (user as { id: number }).id) return;
-      setMessages((prevMessages) => [...prevMessages, data]);
-    });
-    console.log("chatBox");
-
-    return () => {
-      socket?.off("message");
-    };
-  }, []);
-  useEffect(() => {
-    socket?.on("online", (data) => {
-      console.log("online ", data);
+      console.log("message ", data);
+      setMessages((prevMessages) => [
+        ...prevMessages,
+        { id: data.id, msg: data.msg },
+      ]);
     });
     return () => {
       socket?.off("online");
@@ -58,7 +51,11 @@ const ChatBox: React.FC<ChatBoxProps> = ({
       ...prevMessages,
       { id: (user as { id: number }).id, msg: msg },
     ]);
-    socket?.emit("sendMessage", { id: (user as { id: number }).id, msg: msg });
+    socket?.emit("sendMessage", {
+      id: (user as { id: number }).id,
+      msg: msg,
+      room: room,
+    });
   };
   const handleCancel = () => {
     setChatBox(null);
@@ -85,6 +82,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({
               className="text-wrap  bg-slate-400 pl-2 border-1 border-solid border-black"
               key={index}
             >
+              {data.id}
               {data.msg}
             </div>
           ))}

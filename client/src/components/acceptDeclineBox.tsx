@@ -8,11 +8,13 @@ interface AcceptDeclineProps {
   };
   username: string;
   senderId: number;
+  isAcceptDeclineBoxOpen: React.MutableRefObject<boolean>;
 }
 const AcceptDeclineBox: React.FC<AcceptDeclineProps> = ({
   position,
   username,
   senderId,
+  isAcceptDeclineBoxOpen,
 }) => {
   const userContext = React.useContext(UserAndSocketContext);
   const socket: Socket | null = userContext ? userContext.socket : null;
@@ -31,6 +33,7 @@ const AcceptDeclineBox: React.FC<AcceptDeclineProps> = ({
       receiverId: (user as { id: number }).id,
       senderId: senderId,
     });
+    isAcceptDeclineBoxOpen.current = false;
   };
 
   return (
