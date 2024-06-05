@@ -13,6 +13,7 @@ import earthMap from "../assets/img/a.jpg";
 import { Socket } from "socket.io-client";
 import { UserAndSocketContext } from "../context/UserAndsocketContext";
 import AcceptDeclineBox from "./acceptDeclineBox";
+import InviteBox from "./inviteBox";
 
 const Globe = () => {
   const mountRef = useRef<HTMLDivElement>(null);
@@ -21,14 +22,28 @@ const Globe = () => {
     position: { x: number; y: number };
     message: string;
   } | null>(null);
+
+  const markersPositionRef = useRef<{
+    [key: string]: { x: number; y: number };
+  }>({});
+
+  const [inviteBox, setInviteBox] = useState<{
+    geoPosition: { x: number; y: number };
+    position: { x: number; y: number };
+    username: string;
+    receiverId: number;
+  } | null>(null);
   const [acceptDeclineChatBox, setAcceptDeclineChatBox] = useState<{
     position: { x: number; y: number };
     username: string;
     senderId: number;
   } | null>(null);
+
   const moveGlobe = useRef(false);
   const isChatBoxOpen = useRef(false);
   const isAcceptDeclineBoxOpen = useRef(false);
+  const isInviteBoxOpen = useRef(false);
+
   const userContext = React.useContext(UserAndSocketContext);
   const socket: Socket | null = userContext ? userContext.socket : null;
   const user = userContext ? userContext.user : null;
@@ -220,6 +235,7 @@ const Globe = () => {
     const mouse2 = new THREE.Vector2();
     const onMouseClick = (event: MouseEvent) => {
       event.preventDefault();
+      if (isInviteBoxOpen.current) return;
       mouse2.x = (event.clientX / window.innerWidth) * 2 - 1;
       mouse2.y = -(event.clientY / window.innerHeight) * 2 + 1;
       raycaster.setFromCamera(mouse2, camera);
@@ -242,29 +258,29 @@ const Globe = () => {
             intersectionId = id;
           }
         });
-        openChatBox(clickedMarker, intersectionId);
+        openInviteBox(clickedMarker, intersectionId);
       }
     };
 
     window.addEventListener("click", onMouseClick);
 
-    function openChatBox(marker: THREE.Mesh, id: string) {
+    function openInviteBox(marker: THREE.Mesh, id: string) {
       console.log("clicked on ", marker);
       const pos = get2DPositionFrom3D(marker, camera);
 
-      socket?.emit("let's chat", {
+      // socket?.emit("let's chat", {
+      //   username: marker.name,
+      //   senderId: (user as { id: number }).id,
+      //   receiverId: parseInt(id),
+      //   position: { x: pos.x, y: pos.y },
+      // });
+      setInviteBox({
+        geoPosition: markersPositionRef.current[id],
+        position: pos,
         username: marker.name,
-        senderId: (user as { id: number }).id,
         receiverId: parseInt(id),
-        position: { x: pos.x, y: pos.y },
       });
-
-      return () => {
-        // socket?.off("chat request");
-        // socket?.off("roomJoin");
-        // socket?.off("openChat");
-        // socket?.off("exitChat");
-      };
+      isInviteBoxOpen.current = true;
     }
 
     const getUserById = (id: number) => {
@@ -286,6 +302,10 @@ const Globe = () => {
     socket?.on("online", (data) => {
       console.log("online ", data);
       addMarker(data.lat, data.long, data.user.username, data.user.id);
+      markersPositionRef.current[data.user.id.toString()] = {
+        x: data.lat,
+        y: data.long,
+      };
     });
 
     socket?.on("chatRequest", (data) => {
@@ -339,6 +359,7 @@ const Globe = () => {
     socket?.on("exitChat", () => {
       setChatBox(null);
       isChatBoxOpen.current = false;
+      isInviteBoxOpen.current = false;
     });
 
     socket?.on("previousUsers", (data) => {
@@ -351,6 +372,7 @@ const Globe = () => {
     socket?.on("requestRejected", (data) => {
       if (data.senderId === (user as { id: number }).id) {
         alert("Request Rejected");
+        isInviteBoxOpen.current = false;
       }
       if (data.receiverId === (user as { id: number }).id) {
         setAcceptDeclineChatBox(null);
@@ -379,6 +401,16 @@ const Globe = () => {
   return (
     <>
       <div ref={mountRef} className=" h-screen xl:w-1/2" id="canvasContainer" />
+      {inviteBox && isInviteBoxOpen && (
+        <InviteBox
+          geoPosition={inviteBox.geoPosition}
+          position={inviteBox.position}
+          username={inviteBox.username}
+          receiverId={inviteBox.receiverId}
+          isInviteBoxOpen={isInviteBoxOpen}
+          setInviteBox={setInviteBox}
+        />
+      )}
       {acceptDeclineChatBox && (
         <AcceptDeclineBox
           position={acceptDeclineChatBox.position}
