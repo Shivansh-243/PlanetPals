@@ -27,7 +27,9 @@ const users = new Map();
 io.on("connection", (socket) => {
   console.log("a user connected", socket.id);
   socket.on("disconnect", () => {
-    console.log("user disconnected");
+    console.log("user disconnected", users.get(socket.id));
+    socket.broadcast.emit("offline", users.get(socket.id));
+    users.delete(socket.id);
   });
 
   socket.on("let's chat", (data) => {
@@ -42,7 +44,7 @@ io.on("connection", (socket) => {
     console.log("online ", data);
     socket.broadcast.emit("online", data);
     socket.emit("previousUsers", Array.from(users.values()));
-    users.set(data.user.id, {
+    users.set(socket.id, {
       lat: data.lat,
       long: data.long,
       username: data.user.username,

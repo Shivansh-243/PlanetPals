@@ -195,8 +195,8 @@ const Globe = () => {
     function removeMarker(id: number) {
       const marker = markersRef.current[id];
       if (marker) {
-        // sphere.remove(markersRef.current["tokyo"]);
-        delete markersRef.current[id];
+        sphere.remove(markersRef.current[id.toString()]);
+        delete markersRef.current[id.toString()];
       }
     }
 
@@ -355,6 +355,12 @@ const Globe = () => {
       if (data.receiverId === (user as { id: number }).id) {
         setAcceptDeclineChatBox(null);
       }
+    });
+
+    socket?.on("offline", (data) => {
+      console.log("offline ", data);
+      removeMarker(data.id);
+      console.log("removed marker");
     });
     // Cleanup on unmount
     return () => {
