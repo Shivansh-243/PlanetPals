@@ -361,6 +361,7 @@ const Globe = () => {
       console.log("offline ", data);
       removeMarker(data.id);
       console.log("removed marker");
+      setChatBox(null);
     });
     // Cleanup on unmount
     return () => {

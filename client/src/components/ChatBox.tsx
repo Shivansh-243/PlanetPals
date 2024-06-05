@@ -32,7 +32,38 @@ const ChatBox: React.FC<ChatBoxProps> = ({
   const socket: Socket | null = userContext ? userContext.socket : null;
   const user = userContext ? userContext.user : null;
   const room = userContext ? userContext.room : "";
+  const messagesEndRef = React.useRef<HTMLDivElement | null>(null);
 
+  useEffect(() => {
+    console.log("room ", room);
+    let userMessages = (
+      user as { sentMessages: any[]; receivedMessages: any[] }
+    ).sentMessages.concat(
+      (user as { sentMessages: any[]; receivedMessages: any[] })
+        .receivedMessages
+    );
+    userMessages = userMessages.filter(
+      (message) =>
+        (message.senderId === parseInt(room[0]) &&
+          message.receiverId === parseInt(room[1])) ||
+        (message.senderId === parseInt(room[1]) &&
+          message.receiverId === parseInt(room[0]))
+    );
+    userMessages.sort((a, b) => a.id - b.id);
+    console.log("userMessages ", userMessages);
+    if (messages.length >= userMessages.length) return;
+    for (let i = 0; i < userMessages.length; i++) {
+      setMessages((prevMessages) => [
+        ...prevMessages,
+        { id: userMessages[i].senderId, msg: userMessages[i].content },
+      ]);
+    }
+  }, [room, user]);
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages]);
   useEffect(() => {
     socket?.on("message", (data) => {
       console.log("message ", data);
@@ -41,9 +72,6 @@ const ChatBox: React.FC<ChatBoxProps> = ({
         { id: data.id, msg: data.msg },
       ]);
     });
-    return () => {
-      socket?.off("online");
-    };
   }, []);
   const handleSend = () => {
     if (msg === "") return;
@@ -70,25 +98,32 @@ const ChatBox: React.FC<ChatBoxProps> = ({
         left: `${position.x + 1}px`,
         top: `${position.y + 1}px`,
       }}
-      className="bg-white border-1 border-black rounded-lg z-10 w-48 h-72"
+      className="border-1 border-solid border-white rounded-lg z-10 w-48 h-72"
     >
       <h3 className="flex justify-center bg-slate-500 text-white rounded-t-lg">
         {chatWith}
       </h3>
-      <div className="h-[85%] bg-slate-200 border-b-2 border-black text-sm text-black overflow-y-auto ">
+      <div
+        className="h-[85%] bg-slate-700  border-black text-sm text-black overflow-y-auto"
+        style={{ scrollbarWidth: "none" }}
+      >
         {messages.length > 0 &&
           messages.map((data, index) => (
             <div
-              className="text-wrap  bg-slate-400 pl-2 border-1 border-solid border-black"
+              className={`text-wrap pl-2 mb-1 rounded-lg border-1 border-solid border-black ${
+                data.id === (user as { id: number }).id
+                  ? "bg-blue-500 w-[80%] rounded-l-none"
+                  : "bg-gray-400 relative left-[20%] w-[80%] rounded-r-none"
+              }`}
               key={index}
+              ref={index === messages.length - 1 ? messagesEndRef : null}
             >
-              {data.id}
               {data.msg}
             </div>
           ))}
       </div>
       <input
-        className="w-[100%] border-1 border-solid text-black text-wrap text-sm p-1 border-black"
+        className="w-[100%] border-1 border-solid bg-gray-800 text-white text-wrap text-sm p-1 border-white"
         type="text"
         onChange={(e) => setMsg(e.target.value)}
       />

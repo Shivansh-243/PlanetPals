@@ -41,10 +41,10 @@ const UserAndSocketProvider: React.FC<ProviderProps> = ({ children }) => {
     const fetchLocation = async () => {
       const t = await getLocation();
       console.log(t);
-      _socket.emit("online", { lat: t[0], long: t[1], user: user });
+      if (user) _socket.emit("online", { lat: t[0], long: t[1], user: user });
     };
     fetchLocation();
-  }, [user]);
+  }, [user, navigate, socket]);
 
   return (
     <UserAndSocketContext.Provider
