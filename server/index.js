@@ -3,6 +3,8 @@ const express = require("express");
 const { Server } = require("socket.io");
 const cors = require("cors");
 const authRoutes = require("./routes/authRoutes.js");
+const { PrismaClient } = require("@prisma/client");
+const prisma = new PrismaClient();
 
 const app = express();
 
@@ -36,9 +38,23 @@ io.on("connection", (socket) => {
     console.log("lets chat ", data);
     socket.broadcast.emit("chatRequest", data);
   });
-  socket.on("sendMessage", (data) => {
+  socket.on("sendMessage", async (data) => {
     console.log("sendmsg ", data);
     socket.to(data.room).emit("message", data);
+    try {
+      const senderId = parseInt(data.room[0]);
+      const receiverId = parseInt(data.room[1]);
+      const newMessage = await prisma.message.create({
+        data: {
+          senderId: senderId,
+          receiverId: receiverId,
+          content: data.msg,
+        },
+      });
+      console.log("new message ", newMessage);
+    } catch (error) {
+      console.error(error);
+    }
   });
   socket.on("online", (data) => {
     console.log("online ", data);
