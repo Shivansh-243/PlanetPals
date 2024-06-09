@@ -35,8 +35,8 @@ function Signup() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100">
-      <div className="w-full max-w-md p-8 space-y-8 bg-white rounded-lg shadow">
+    <div className="flex items-center justify-center min-h-screen bg-gray-800">
+      <div className="w-full max-w-md p-8 space-y-8  bg-gray-700 rounded-lg shadow">
         <h2 className="text-2xl font-bold text-center">Signup</h2>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="rounded-md shadow-sm -space-y-px">
@@ -49,7 +49,7 @@ function Signup() {
                 name="username"
                 type="text"
                 required
-                className="relative block w-full px-3 py-2 border border-gray-300 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                className="relative block w-full text-white px-3 py-2 border border-gray-700 bg-gray-500 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                 placeholder="Username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
@@ -64,7 +64,7 @@ function Signup() {
                 name="email"
                 type="email"
                 required
-                className="relative block w-full px-3 py-2 border border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                className="relative block w-full text-white px-3 py-2 border border-gray-700 bg-gray-500 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                 placeholder="Email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -79,7 +79,7 @@ function Signup() {
                 name="password"
                 type="password"
                 required
-                className="relative block w-full px-3 py-2 border border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                className="relative block w-full text-white px-3 py-2 border border-gray-700 bg-gray-500 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                 placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -94,7 +94,7 @@ function Signup() {
                 name="confirm-password"
                 type="password"
                 required
-                className="relative block w-full px-3 py-2 border border-gray-300 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                className="relative block w-full px-3 py-2 border text-white border-gray-700 bg-gray-500 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                 placeholder="Confirm Password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}

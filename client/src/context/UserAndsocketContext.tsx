@@ -2,7 +2,9 @@ import React, { createContext, useState, ReactNode, useEffect } from "react";
 import getLocation from "../components/getCurrentLocation";
 import io, { Socket } from "socket.io-client";
 import { useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 
+// Inside your UserAndSocketProvider component
 // Define the shape of the context
 interface ContextProps {
   user: object;
@@ -27,8 +29,9 @@ const UserAndSocketProvider: React.FC<ProviderProps> = ({ children }) => {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [room, setRoom] = useState<string>("");
   const navigate = useNavigate();
+  const location = useLocation();
   useEffect(() => {
-    if (Object.keys(user).length === 0) {
+    if (Object.keys(user).length === 0 && location.pathname !== "/signup") {
       navigate("/login");
       return;
     }

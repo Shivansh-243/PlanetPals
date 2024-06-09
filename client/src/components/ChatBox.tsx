@@ -84,6 +84,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({
       msg: msg,
       room: room,
     });
+    setMsg("");
   };
   const handleCancel = () => {
     setChatBox(null);
@@ -125,6 +126,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({
       <input
         className="w-[100%] border-1 border-solid bg-gray-800 text-white text-wrap text-sm p-1 border-white"
         type="text"
+        value={msg}
         onChange={(e) => setMsg(e.target.value)}
       />
       <div className="flex">

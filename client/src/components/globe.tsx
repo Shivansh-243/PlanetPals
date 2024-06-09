@@ -109,7 +109,17 @@ const Globe = () => {
     };
 
     window.addEventListener("mousedown", () => {
-      if (isChatBoxOpen.current || isAcceptDeclineBoxOpen.current) return;
+      console.log(
+        "mousedown",
+        isChatBoxOpen.current,
+        isAcceptDeclineBoxOpen.current
+      );
+      if (
+        isInviteBoxOpen.current ||
+        isChatBoxOpen.current ||
+        isAcceptDeclineBoxOpen.current
+      )
+        return;
       moveGlobe.current = true;
     });
     window.addEventListener("mousemove", (event) => {
@@ -300,6 +310,9 @@ const Globe = () => {
     // Handle socket events
 
     socket?.on("online", (data) => {
+      if (data.user.id === (user as { id: number }).id) return;
+      // Check if marker with this id already exists
+      if (markersPositionRef.current[data.user.id.toString()]) return;
       console.log("online ", data);
       addMarker(data.lat, data.long, data.user.username, data.user.id);
       markersPositionRef.current[data.user.id.toString()] = {
@@ -313,17 +326,6 @@ const Globe = () => {
       if (data.receiverId === (user as { id: number }).id) {
         const t = getUserById(data.senderId);
         console.log("chat request from ", data.senderId);
-
-        // rotating the globe to the user
-        // const requestVector = t.position;
-        // const upVector = new THREE.Vector3(11, -11, 11);
-
-        // console.log("upVector ", upVector);
-        // const axis = new THREE.Vector3()
-        //   .crossVectors(upVector, requestVector)
-        //   .normalize();
-        // const angle = upVector.angleTo(requestVector);
-        // sphere.rotateOnAxis(axis, angle);
 
         setAcceptDeclineChatBox({
           position: get2DPositionFrom3D(t, camera),
@@ -355,6 +357,8 @@ const Globe = () => {
       isChatBoxOpen.current = true;
       setAcceptDeclineChatBox(null);
       isAcceptDeclineBoxOpen.current = false;
+      setInviteBox(null);
+      isInviteBoxOpen.current = false;
     });
     socket?.on("exitChat", () => {
       setChatBox(null);
@@ -373,6 +377,7 @@ const Globe = () => {
       if (data.senderId === (user as { id: number }).id) {
         alert("Request Rejected");
         isInviteBoxOpen.current = false;
+        setInviteBox(null);
       }
       if (data.receiverId === (user as { id: number }).id) {
         setAcceptDeclineChatBox(null);
@@ -384,6 +389,9 @@ const Globe = () => {
       removeMarker(data.id);
       console.log("removed marker");
       setChatBox(null);
+      isInviteBoxOpen.current = false;
+      inviteBox && setInviteBox(null);
+      isChatBoxOpen.current = false;
     });
     // Cleanup on unmount
     return () => {
