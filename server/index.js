@@ -57,6 +57,9 @@ io.on("connection", (socket) => {
     }
   });
   socket.on("online", (data) => {
+    if (users.has(socket.id)) {
+      return;
+    }
     console.log("online ", data);
     socket.broadcast.emit("online", data);
     socket.emit("previousUsers", Array.from(users.values()));
